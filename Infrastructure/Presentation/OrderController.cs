@@ -40,6 +40,7 @@ namespace Presentation
         }
 
         [HttpGet("DeliveryMethod")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetAllDeliveryMethod()
         {
             var result = await serviceManager.OrderService.GetAllDeliveryMethodsAsync();

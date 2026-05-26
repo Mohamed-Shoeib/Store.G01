@@ -29,6 +29,16 @@ namespace Store.G02.Api.Extensions
             services.AddApplicationServices(configuration);
             services.AddConfigureServices();
             services.AddConfigureJwt(configuration);
+
+            services.AddCors(config =>
+            {
+                config.AddPolicy("MyPolicy", options =>
+                {
+                    options.AllowAnyHeader();
+                    options.AllowAnyMethod();
+                    options.WithOrigins("http://localhost:4200");
+                });
+            });
             return services;
         }
         private static IServiceCollection AddBuiltInServices(this IServiceCollection services)
@@ -142,6 +152,7 @@ namespace Store.G02.Api.Extensions
                 app.UseSwaggerUI();
             }
             app.UseStaticFiles();
+            app.UseCors("MyPolicy");
             app.UseHttpsRedirection();
             app.UseAuthorization();
             app.MapControllers();

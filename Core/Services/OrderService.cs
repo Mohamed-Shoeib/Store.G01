@@ -46,8 +46,16 @@ namespace Services
 
             // ToDo : PaymentIntentId
 
+            // Check Order Exists
+
+            var spec = new OrderWithPaymentIntentSpecifications(basket.PaymentIntentId);
+            var ExistsOrder = await unitOfWork.GetRepository<Order, Guid>().GetAsync(spec);
+            if(ExistsOrder is not null)
+                unitOfWork.GetRepository<Order,Guid>().Delete(ExistsOrder);
+
+
             // Create Order
-            var order = new Order(userEmail, address,orderItems,deliveryMethod,subtotal,"");
+            var order = new Order(userEmail, address,orderItems,deliveryMethod,subtotal,basket.PaymentIntentId);
 
             await unitOfWork.GetRepository<Order, Guid>().AddAsync(order);
             var count = await unitOfWork.SaveChanges();

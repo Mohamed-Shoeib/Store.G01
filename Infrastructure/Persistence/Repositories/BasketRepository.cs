@@ -34,7 +34,7 @@ namespace Persistence.Repositories
         {
             var redisValue = JsonSerializer.Serialize(basket);
             var flag = await database.StringSetAsync(basket.Id, redisValue, TimeSpan.FromDays(30));
-            return flag ? await GetBasketAsync(basket.Id) : null;
+            return flag ? basket : null;
         }
         public async Task<bool> DeleteBasketAsync(string id)
         {
