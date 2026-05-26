@@ -1,7 +1,11 @@
 ﻿using Domain.Contracts;
 using Domain.Models;
+using Domain.Models.Identity;
+using Domain.Models.OrderModels;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Persistence.Data;
+using Persistence.Identity;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,9 +19,16 @@ namespace Persistence
     public class DbInitailizer : IDbInitailizer
     {
         private readonly StoreDbContext context;
-        public DbInitailizer(StoreDbContext _context)
-        {
+        private readonly StoreIdentityDbContext identityDbContext;
+        private readonly UserManager<AppUser> userManager;
+        private readonly RoleManager<IdentityRole> roleManager;
+
+        public DbInitailizer(StoreDbContext _context,StoreIdentityDbContext _identityDbContext,UserManager<AppUser> _userManager,RoleManager<IdentityRole> _roleManager)
+        { 
             context = _context;
+            identityDbContext = _identityDbContext;
+            userManager = _userManager;
+            roleManager = _roleManager;
         }
         public async Task InitializeAsync()
         {
@@ -92,10 +103,69 @@ namespace Persistence
                     }
                 }
 
+                // Seed DeliveryMethods From Json File
+
+                if (!context.DeliveryMethods.Any())
+                {
+                    // Seed DeliveryMethods From Json File
+                    // 1. Read All Data From Json File as String
+                    var deliveryData = await File.ReadAllTextAsync(@"..\Infrastructure\Persistence\Seeding\delivery.json");
+
+                    // 2. Transorm String To C# Object (List<DeliveryMethod>) Using JsonSerializer
+                    var deliveryMethods = JsonSerializer.Deserialize<List<DeliveryMethod>>(deliveryData);
+
+                    // 3. Add List<DeliveryMethod> To Database Using AddRangeAsync Method
+                    if (deliveryMethods is not null && deliveryMethods.Any())
+                    {
+                        await context.DeliveryMethods.AddRangeAsync(deliveryMethods);
+                        await context.SaveChangesAsync();
+                    }
+                }
+
             }
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
+            }
+        }
+
+        public async Task InitializeIdentityAsync()
+        {
+            // Create Database and Tables If Not Exists And Apply Pending Migrations
+            if (identityDbContext.Database.GetPendingMigrations().Any())
+            {
+                await identityDbContext.Database.MigrateAsync();
+            }
+
+            // Roles Seeding
+            if (!roleManager.Roles.Any())
+            {
+                await roleManager.CreateAsync(new IdentityRole() { Name = "SuperAdmin" });
+                await roleManager.CreateAsync(new IdentityRole() { Name = "Admin" });
+                //await roleManager.CreateAsync(new IdentityRole() { Name = "Customer" });
+            }
+
+            // Data Seeding
+            if (!identityDbContext.Users.Any())
+            {
+                var superAdminUser = new AppUser()
+                {
+                    DisplayName = "Super Admin",
+                    Email = "Superadmin@gmail.com",
+                    PhoneNumber = "01000000000",
+                    UserName = "superadmin"
+                }; var AdminUser = new AppUser()
+                {
+                    DisplayName = "Admin",
+                    Email = "admin@gmail.com",
+                    PhoneNumber = "01132359779",
+                    UserName = "admin"
+                };
+                await userManager.CreateAsync(superAdminUser, "Superadmin@123#");
+                await userManager.CreateAsync(AdminUser, "Admin@123#");
+
+                await userManager.AddToRoleAsync(superAdminUser, "SuperAdmin");
+                await userManager.AddToRoleAsync(AdminUser, "Admin");
             }
         }
     }
